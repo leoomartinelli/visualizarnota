@@ -1,0 +1,393 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boletim Escolar - Visualizador</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e74c3c;
+        }
+        h1 {
+            color: #e74c3c;
+            margin-bottom: 5px;
+        }
+        .upload-section {
+            background-color: #f0f7ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 2px dashed #3498db;
+            text-align: center;
+        }
+        .student-info {
+            background-color: #fdecea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+            overflow-x: auto;
+            display: block;
+        }
+        th {
+            background-color: #e74c3c;
+            color: white;
+            text-align: left;
+            padding: 12px;
+            position: sticky;
+            top: 0;
+        }
+        td {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            min-width: 80px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .aprovado {
+            background-color: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+        .recuperacao {
+            background-color: #fff3cd;
+            color: #856404;
+            font-weight: bold;
+        }
+        .cursando {
+            background-color: #e2e3e5;
+            color: #383d41;
+            font-weight: bold;
+        }
+        .curso-destaque {
+            background-color: #e3f2fd;
+            font-weight: bold;
+        }
+        .legenda {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #e74c3c;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #777;
+        }
+        .destaque {
+            font-weight: bold;
+        }
+        #fileInput {
+            display: none;
+        }
+        .upload-btn {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .upload-btn:hover {
+            background-color: #2980b9;
+        }
+        .file-name {
+            margin-left: 10px;
+            font-style: italic;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3498db;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .resumo-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .resumo-valor {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Visualizador de Boletim Escolar</h1>
+            <p>Carregue seu arquivo CSV para visualizar seu boletim</p>
+        </header>
+
+        <div class="upload-section">
+            <input type="file" id="fileInput" accept=".csv">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                📁 Selecionar Arquivo CSV
+            </button>
+            <span id="fileName" class="file-name">Nenhum arquivo selecionado</span>
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <p>Processando arquivo...</p>
+            </div>
+        </div>
+
+        <div id="studentInfo" class="student-info" style="display: none;">
+            <h2>Dados do Aluno</h2>
+            <p><strong>Nome:</strong> <span id="studentName"></span></p>
+            <p><strong>Matrícula:</strong> <span id="studentId"></span></p>
+            <p><strong>Curso:</strong> <span id="studentCourse"></span></p>
+        </div>
+
+        <div id="reportCard">
+            <!-- Aqui será gerado o boletim automaticamente -->
+        </div>
+
+        <div class="legenda">
+            <h3>📌 LEGENDA</h3>
+            <p><span class="aprovado" style="padding: 3px 8px; border-radius: 3px;">✅ Aprovado(a)</span> Média final ≥ 6.0</p>
+            <p><span class="recuperacao" style="padding: 3px 8px; border-radius: 3px;">⚠️ Recuperação</span> Média < 6.0</p>
+            <p><span class="cursando" style="padding: 3px 8px; border-radius: 3px;">📝 Cursando</span> Disciplina em andamento</p>
+            <p><span style="background-color: #e3f2fd; padding: 3px 8px; border-radius: 3px; font-weight: bold;">Disciplinas técnicas</span> Matérias específicas do curso</p>
+        </div>
+
+        <div class="footer">
+            <p>Sistema de Visualização de Boletins | © 2024</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('loadingIndicator').style.display = 'block';
+
+            // Simular processamento (remova isso em produção)
+            setTimeout(() => {
+                processCSV(file);
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }, 1000);
+        });
+
+        function processCSV(file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n');
+                
+                // Extrair informações do aluno (primeira linha)
+                const studentInfo = lines[0].split(';')[0];
+                const studentParts = studentInfo.split('-');
+                const studentId = studentParts[0].replace('Aluno: ', '').trim();
+                const studentName = studentParts[1].trim();
+                const studentCourse = studentParts[2].trim();
+                
+                document.getElementById('studentName').textContent = studentName;
+                document.getElementById('studentId').textContent = studentId;
+                document.getElementById('studentCourse').textContent = studentCourse;
+                document.getElementById('studentInfo').style.display = 'block';
+                
+                // Processar disciplinas (a partir da 3ª linha)
+                const courses = [];
+                const headers = lines[1].split(';').map(h => h.trim()); // Cabeçalhos das colunas
+                
+                for (let i = 2; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
+                    
+                    const columns = lines[i].split(';');
+                    if (columns.length < 9) continue;
+                    
+                    const course = {
+                        name: columns[0].trim(),
+                        a1: columns[1].trim() || '-',
+                        a2: columns[2].trim() || '-',
+                        at: columns[3].trim() || '-',
+                        bs: columns[4].trim() || '-',
+                        be: columns[5].trim() || '-',
+                        ar: columns[6].trim() || '-',
+                        mb: columns[7].trim() || '-',
+                        absences: columns[8].trim() || '0.00',
+                        finalGrade: columns[9].trim() || '-',
+                        workload: columns[10].trim() || '-',
+                        frequency: columns[11].trim() || '-',
+                        status: 'Matriculado' // Será calculado abaixo
+                    };
+                    
+                    // Se não tem média final, usar MB (Média Bimestral) como referência
+                    if (course.finalGrade === '-' && course.mb !== '-') {
+                        course.finalGrade = course.mb;
+                    }
+                    
+                    // Calcular status baseado na média final
+                    const grade = parseFloat(course.finalGrade) || 0;
+                    if (grade === 0) {
+                        course.status = 'Cursando';
+                    } else if (grade >= 6) {
+                        course.status = 'Aprovado';
+                    } else {
+                        course.status = 'Recuperação';
+                    }
+                    
+                    courses.push(course);
+                }
+                
+                generateReportCard(courses);
+            };
+            
+            reader.readAsText(file, 'ISO-8859-1'); // Usar encoding apropriado para CSV brasileiro
+        }
+
+        function generateReportCard(courses) {
+            const reportCardDiv = document.getElementById('reportCard');
+            reportCardDiv.innerHTML = '<h2>📋 Boletim Escolar</h2>';
+            
+            // Resumo estatístico
+            const totalCourses = courses.length;
+            const totalWorkload = courses.reduce((sum, c) => sum + parseFloat(c.workload || 0), 0);
+            const avgFrequency = courses.reduce((sum, c) => sum + parseFloat(c.frequency || 0), 0) / courses.length;
+            const approvedCourses = courses.filter(c => c.status === 'Aprovado').length;
+            const recoveryCourses = courses.filter(c => c.status === 'Recuperação').length;
+            const inProgressCourses = courses.filter(c => c.status === 'Cursando').length;
+            
+            const summaryHTML = `
+                <div class="legenda">
+                    <h3>📊 Resumo Acadêmico</h3>
+                    <div class="resumo-item">
+                        <span>Total de disciplinas:</span>
+                        <span class="resumo-valor">${totalCourses}</span>
+                    </div>
+                    <div class="resumo-item">
+                        <span>Carga horária total:</span>
+                        <span class="resumo-valor">${totalWorkload} horas</span>
+                    </div>
+                    <div class="resumo-item">
+                        <span>Frequência média:</span>
+                        <span class="resumo-valor">${avgFrequency.toFixed(2)}%</span>
+                    </div>
+                    <div class="resumo-item">
+                        <span>Aprovadas:</span>
+                        <span class="resumo-valor">${approvedCourses}</span>
+                    </div>
+                    <div class="resumo-item">
+                        <span>Em recuperação:</span>
+                        <span class="resumo-valor">${recoveryCourses}</span>
+                    </div>
+                    <div class="resumo-item">
+                        <span>Em andamento:</span>
+                        <span class="resumo-valor">${inProgressCourses}</span>
+                    </div>
+                </div>
+            `;
+            
+            reportCardDiv.innerHTML += summaryHTML;
+            
+            // Tabela de disciplinas
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+            
+            // Cabeçalho da tabela
+            thead.innerHTML = `
+                <tr>
+                    <th>Disciplina</th>
+                    <th>A1</th>
+                    <th>A2</th>
+                    <th>AT</th>
+                    <th>Média</th>
+                    <th>Faltas</th>
+                    <th>Freq.</th>
+                    <th>Status</th>
+                </tr>
+            `;
+            
+            // Corpo da tabela
+            courses.forEach(course => {
+                const row = document.createElement('tr');
+                
+                // Destacar disciplinas técnicas
+                const courseNameLower = course.name.toLowerCase();
+                if (courseNameLower.includes('programação') || courseNameLower.includes('sistemas') || 
+                    courseNameLower.includes('computação') || courseNameLower.includes('desenvolvimento')) {
+                    row.classList.add('curso-destaque');
+                }
+                
+                // Determinar status e classe CSS
+                let statusSymbol, statusClass;
+                switch(course.status) {
+                    case 'Aprovado':
+                        statusSymbol = '✅ Aprovado';
+                        statusClass = 'aprovado';
+                        break;
+                    case 'Recuperação':
+                        statusSymbol = '⚠️ Recuperação';
+                        statusClass = 'recuperacao';
+                        break;
+                    default:
+                        statusSymbol = '📝 Cursando';
+                        statusClass = 'cursando';
+                }
+                
+                row.innerHTML = `
+                    <td>${course.name}</td>
+                    <td>${course.a1}</td>
+                    <td>${course.a2}</td>
+                    <td>${course.at}</td>
+                    <td class="${statusClass}">${course.finalGrade}</td>
+                    <td>${course.absences}</td>
+                    <td>${course.frequency}%</td>
+                    <td class="${statusClass}">${statusSymbol}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            reportCardDiv.appendChild(table);
+        }
+    </script>
+</body>
+</html>
